@@ -1,0 +1,16 @@
+Projekt_ID,Projektname,Kosten_Plan,Kosten_Ist,Termin_Plan,Termin_Ist,Status,Verantwortlich,Abteilung
+PRJ-001,Neues CRM System,150000,165000,2024-12-31,2024-12-15,In Progress,M. Schmidt,IT
+PRJ-002,Website Relaunch,75000,72000,2024-09-30,2024-09-28,Completed,A. Müller,Marketing
+PRJ-003,ERP System Upgrade,200000,225000,2025-03-31,,At Risk,T. Weber,IT
+PRJ-004,Mobile App Entwicklung,120000,135000,2024-11-30,,In Progress,S. Fischer,IT
+PRJ-005,Cloud Migration,180000,180000,2025-01-31,,On Track,K. Bauer,IT
+PRJ-006,Lager-Automatisierung,95000,108000,2024-10-15,2024-10-20,Completed,L. Zimmermann,Operations
+PRJ-007,Neue Produktionsanlage,450000,485000,2025-06-30,,At Risk,R. Hoffmann,Production
+PRJ-008,Qualitätsmanagement-System,85000,82000,2024-08-31,2024-08-25,Completed,M. Klein,Quality
+PRJ-009,HR-Software Einführung,110000,125000,2024-12-15,,In Progress,J. Schneider,HR
+PRJ-010,Sicherheits-Audit,45000,43000,2024-07-31,2024-07-29,Completed,P. Wagner,Compliance
+PRJ-011,Datenanalyse-Plattform,165000,172000,2025-02-28,,In Progress,F. Koch,Data Science
+PRJ-012,Kundenportal,135000,148000,2025-01-15,,At Risk,N. Becker,Customer Service
+PRJ-013,Reporting-Dashboard,68000,65000,2024-11-30,,On Track,D. Schulz,Controlling
+PRJ-014,Prozessoptimierung Vertrieb,92000,97000,2024-10-31,2024-11-05,Completed,C. Hartmann,Sales
+PRJ-015,Digitalisierung Archiv,78000,89000,2025-04-30,,In Progress,B. Krause,Administration

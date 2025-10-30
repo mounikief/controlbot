@@ -1,0 +1,24 @@
+# ControlBot - Python Requirements
+# Diese Pakete werden für ControlBot benötigt
+
+# Web Framework
+streamlit>=1.30.0
+
+# Datenverarbeitung
+pandas>=2.0.0
+numpy>=1.24.0
+openpyxl>=3.1.0  # Für Excel-Support
+
+# OpenAI API
+openai>=1.10.0
+
+# Word-Dokument-Erstellung
+python-docx>=1.1.0
+Pillow>=10.0.0  # Für Bilder
+
+# Visualisierungen
+plotly>=5.18.0
+matplotlib>=3.7.0
+
+# Utilities
+python-dateutil>=2.8.2
