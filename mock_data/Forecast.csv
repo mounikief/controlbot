@@ -1,0 +1,4 @@
+Projekt_ID,Quartal,Kosten_Forecast,Basis,Konfidenz
+ICE-001,Q3-2024,398000,Trend,85%
+ICE-001,Q4-2024,325000,Plan,70%
+ICE-001,Q1-2025,0,Plan,100%

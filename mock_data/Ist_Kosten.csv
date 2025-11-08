@@ -1,0 +1,13 @@
+Projekt_ID,Monat,Kosten_Ist,Kategorie,Details
+ICE-001,2024-01,125000,Personal,10 MA
+ICE-001,2024-01,8000,Material,Hardware
+ICE-001,2024-02,152000,Personal,12 MA
+ICE-001,2024-02,12000,Material,Software-Lizenzen
+ICE-001,2024-03,103000,Personal,8 MA
+ICE-001,2024-03,5000,Reisekosten,Meetings
+ICE-001,2024-04,132000,Personal,10 MA
+ICE-001,2024-04,8000,Material,Equipment
+ICE-001,2024-05,189000,Personal,15 MA
+ICE-001,2024-05,15000,Externe,Berater
+ICE-001,2024-06,158000,Personal,12 MA
+ICE-001,2024-06,10000,Material,Testing-Tools

@@ -1,0 +1,6 @@
+Projekt_ID,AP_Name,Status,Fortschritt,Start,Ende,Budget,Ist,Verantwortlich
+ICE-001,Planung,Done,100%,2024-01-01,2024-02-15,150000,149000,Schmidt M.
+ICE-001,Entwicklung,In Progress,65%,2024-02-15,2024-06-30,480000,386000,Müller A.
+ICE-001,Testing,Not Started,0%,2024-07-01,2024-08-31,220000,0,Weber K.
+ICE-001,Rollout,Not Started,0%,2024-09-01,2024-11-30,240000,0,Fischer T.
+ICE-001,Wartung,Not Started,0%,2024-12-01,2024-12-31,60000,0,Becker S.
