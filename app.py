@@ -1,6 +1,6 @@
 """
-ControlBot v1.1 - KI-Assistent für Projektcontroller
-Mit Smart Data Import und automatischer Spalten-Erkennung
+ControlBot v1.2 - KI-Assistent für Projektcontroller
+Mit Smart Data Import und Multi-Source Intelligence
 """
 
 import streamlit as st
@@ -21,460 +21,349 @@ try:
 except ImportError:
     TEMPLATE_FEATURES = False
 
+try:
+    from multi_file_processor import MultiFileProcessor
+    MULTIFILE_FEATURES = True
+except ImportError:
+    MULTIFILE_FEATURES = False
+
 from data_processor import DataProcessor
 from ai_generator import AIReportGenerator
 from report_builder import ReportBuilder
 import plotly.express as px
 import plotly.graph_objects as go
 
-# Seitenkonfiguration
 st.set_page_config(
-    page_title="ControlBot - Ihr KI-Projektcontrolling-Assistent",
+    page_title="ControlBot",
     page_icon="📊",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="wide"
 )
 
-# Custom CSS
-st.markdown("""
-    <style>
-    .main-header {
-        font-size: 2.5rem;
-        font-weight: bold;
-        color: #1f77b4;
-        text-align: center;
-        padding: 1rem 0;
-    }
-    .sub-header {
-        font-size: 1.2rem;
-        color: #666;
-        text-align: center;
-        padding-bottom: 2rem;
-    }
-    .success-box {
-        background-color: #d4edda;
-        border: 1px solid #c3e6cb;
-        border-radius: 0.5rem;
-        padding: 1rem;
-        margin: 1rem 0;
-    }
-    .warning-box {
-        background-color: #fff3cd;
-        border: 1px solid #ffeaa7;
-        border-radius: 0.5rem;
-        padding: 1rem;
-        margin: 1rem 0;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
 def init_session_state():
-    """Initialisiere Session State Variablen"""
     if 'data_loaded' not in st.session_state:
         st.session_state.data_loaded = False
-    if 'analysis_done' not in st.session_state:
-        st.session_state.analysis_done = False
-    if 'df' not in st.session_state:
-        st.session_state.df = None
+    if 'multifile_loaded' not in st.session_state:
+        st.session_state.multifile_loaded = False
+    if 'integrated_data' not in st.session_state:
+        st.session_state.integrated_data = None
     if 'analysis_results' not in st.session_state:
         st.session_state.analysis_results = None
 
 def main():
-    """Hauptfunktion der Anwendung"""
     init_session_state()
     
-    # Header
-    version = "v1.1 Smart" if SMART_FEATURES else "v1.0"
-    st.markdown(f'<div class="main-header">📊 ControlBot {version}</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">Ihr intelligenter Assistent für Projektcontrolling</div>', unsafe_allow_html=True)
+    version = "v1.2 Multi-Source" if MULTIFILE_FEATURES else "v1.1"
+    st.markdown(f'<h1 style="text-align: center; color: #1f77b4;">📊 ControlBot {version}</h1>', unsafe_allow_html=True)
+    st.markdown('<p style="text-align: center; color: #666;">Ihr intelligenter Assistent für Projektcontrolling</p>', unsafe_allow_html=True)
     
-    # Sidebar
     with st.sidebar:
         st.markdown("---")
         st.markdown("### 🎯 Navigation")
-        page = st.radio(
-            "Wählen Sie eine Seite:",
-            ["📤 Daten Upload", "📊 Dashboard", "📝 Report Generator", "ℹ️ Anleitung"],
-            label_visibility="collapsed"
-        )
+        
+        pages = ["📤 Daten Upload"]
+        if MULTIFILE_FEATURES:
+            pages.append("📤 Multi-Source Upload")
+        pages.extend(["📊 Dashboard", "📝 Report Generator", "ℹ️ Anleitung"])
+        
+        page = st.radio("Seite:", pages, label_visibility="collapsed")
         
         st.markdown("---")
         st.markdown("### ⚙️ Einstellungen")
         
-        # OpenAI API Key - Prüfe zuerst Streamlit Secrets
-        api_key_from_secrets = None
+        api_key = None
         try:
-            api_key_from_secrets = st.secrets.get("OPENAI_API_KEY", None)
+            api_key = st.secrets.get("OPENAI_API_KEY")
         except:
             pass
         
-        if api_key_from_secrets:
-            os.environ['OPENAI_API_KEY'] = api_key_from_secrets
-            st.success("✅ API Key aus Secrets geladen")
+        if api_key:
+            os.environ['OPENAI_API_KEY'] = api_key
+            st.success("✅ API Key geladen")
         else:
-            api_key = st.text_input(
-                "OpenAI API Key",
-                type="password",
-                help="Ihr OpenAI API Key für die KI-Textgenerierung"
-            )
-            if api_key:
-                os.environ['OPENAI_API_KEY'] = api_key
-                st.success("✅ API Key gespeichert")
+            user_key = st.text_input("OpenAI API Key", type="password")
+            if user_key:
+                os.environ['OPENAI_API_KEY'] = user_key
+                st.success("✅ Key gespeichert")
         
         st.markdown("---")
-        st.markdown("### 📞 Support")
-        st.info("Bei Fragen: support@controlbot.de")
-        
-        # Feature Info
+        st.markdown("### ✨ Features")
         if SMART_FEATURES:
-            st.markdown("---")
-            st.markdown("### ✨ Smart Features")
-            st.success("✅ Automatische Spalten-Erkennung")
-            st.success("✅ Flexible Format-Parser")
-            if TEMPLATE_FEATURES:
-                st.success("✅ Template-System aktiv")
+            st.success("✅ Smart Import")
+        if TEMPLATE_FEATURES:
+            st.success("✅ Templates")
+        if MULTIFILE_FEATURES:
+            st.success("✅ Multi-Source")
     
-    # Hauptinhalt
     if page == "📤 Daten Upload":
         show_upload_page()
+    elif page == "📤 Multi-Source Upload":
+        show_multifile_upload()
     elif page == "📊 Dashboard":
-        show_dashboard_page()
+        show_dashboard()
     elif page == "📝 Report Generator":
         show_report_page()
     elif page == "ℹ️ Anleitung":
         show_help_page()
 
 def show_upload_page():
-    """Seite für Daten-Upload mit Smart Features"""
-    st.header("📤 Projektdaten hochladen")
+    st.header("📤 Daten Upload (Einzelne Datei)")
     
-    # Smart Features Info
     if SMART_FEATURES:
-        st.info("🚀 **Smart Import aktiviert:** Automatische Erkennung von 20+ Datenformaten!")
+        st.info("🚀 Smart Import aktiviert: Automatische Erkennung von 20+ Formaten!")
     
-    # Template-Auswahl (wenn verfügbar)
-    selected_template = None
-    if TEMPLATE_FEATURES:
-        template_mgr = TemplateManager()
-        templates = template_mgr.list_templates()
-        
-        st.markdown("### 📋 Template wählen (optional)")
-        template_options = ["Automatisch erkennen"] + [t['name'] for t in templates]
-        selected_template_name = st.selectbox(
-            "Datenformat:",
-            template_options,
-            help="Wählen Sie ein Template für Ihr Datenformat"
-        )
-        
-        if selected_template_name != "Automatisch erkennen":
-            # Finde Template-Key
-            for t in templates:
-                if t['name'] == selected_template_name:
-                    selected_template = template_mgr.get_template(list(template_mgr.templates.keys())[templates.index(t)])
-                    with st.expander(f"ℹ️ Info zu {selected_template_name}"):
-                        st.write(f"**Quelle:** {selected_template.source_system}")
-                        st.write(f"**Beschreibung:** {selected_template.description}")
-                        st.code(selected_template.example_format, language="text")
-                    break
+    uploaded_file = st.file_uploader("Excel oder CSV", type=['csv', 'xlsx', 'xls'])
     
-    # File Upload
-    st.markdown("### 📁 Datei hochladen")
-    uploaded_file = st.file_uploader(
-        "Wählen Sie eine Excel- oder CSV-Datei",
-        type=['xlsx', 'xls', 'csv'],
-        help="Unterstützt: .xlsx, .xls, .csv"
-    )
-    
-    # Beispieldaten Download
-    st.markdown("### 📥 Beispieldaten")
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("📄 Beispieldaten herunterladen"):
-            st.info("Beispieldaten sind in der beispieldaten.csv enthalten")
-    
-    if uploaded_file is not None:
+    if uploaded_file:
         try:
-            # Datei laden
             if uploaded_file.name.endswith('.csv'):
                 df = pd.read_csv(uploaded_file)
             else:
                 df = pd.read_excel(uploaded_file)
             
-            st.success(f"✅ Datei geladen: {len(df)} Zeilen, {len(df.columns)} Spalten")
+            st.success(f"✅ {uploaded_file.name} geladen: {len(df)} Zeilen")
             
-            # Smart Processing
             if SMART_FEATURES:
                 processor = SmartDataProcessor()
+                mapping = processor.detect_column_mapping(df)
                 
-                # Automatische Spalten-Erkennung
-                st.markdown("### 🔍 Automatische Erkennung")
-                
-                detected_mapping = processor.detect_column_mapping(df)
-                
-                if detected_mapping:
-                    st.success(f"✅ {len(detected_mapping)} Spalten automatisch erkannt!")
+                if mapping:
+                    st.success(f"✅ {len(mapping)} Spalten erkannt!")
                     
-                    with st.expander("📋 Erkannte Zuordnungen anzeigen"):
-                        for standard, actual in detected_mapping.items():
-                            st.write(f"✓ **{actual}** → {standard}")
-                    
-                    # Daten validieren und bereinigen
-                    if st.button("🚀 Daten analysieren", type="primary"):
-                        with st.spinner("Verarbeite Daten..."):
-                            df_clean, validation = processor.validate_and_clean(df, detected_mapping)
-                            
-                            # Validierungs-Report
-                            st.markdown("### 📊 Validierungs-Ergebnis")
-                            st.info(f"✅ {validation['cleaned_rows']} von {validation['total_rows']} Projekten erfolgreich geladen")
-                            
-                            if validation['warnings']:
-                                st.warning("⚠️ **Warnungen:**")
-                                for warning in validation['warnings']:
-                                    st.write(f"  - {warning}")
-                            
-                            if validation['infos']:
-                                with st.expander("💡 Weitere Informationen"):
-                                    for info in validation['infos']:
-                                        st.write(f"  - {info}")
-                            
-                            # Analyse durchführen
+                    if st.button("🚀 Analysieren", type="primary"):
+                        with st.spinner("Verarbeite..."):
+                            df_clean, validation = processor.validate_and_clean(df, mapping)
                             analysis = processor.analyze_projects(df_clean)
                             
-                            # In Session State speichern
-                            st.session_state.df = df_clean
                             st.session_state.analysis_results = analysis
                             st.session_state.data_loaded = True
-                            st.session_state.analysis_done = True
                             
-                            st.success("✅ Analyse abgeschlossen! Gehen Sie zum Dashboard.")
+                            st.success("✅ Analyse fertig!")
                             st.balloons()
-                else:
-                    st.warning("⚠️ Keine Spalten automatisch erkannt. Bitte prüfen Sie Ihr Datenformat.")
-                    st.info("💡 Tipp: Nutzen Sie eines der vordefinierten Templates oder benennen Sie Spalten um.")
             
-            else:
-                # Fallback auf alte Methode
-                st.warning("Smart Features nicht verfügbar. Verwende Standard-Import.")
-                processor = DataProcessor()
-                
-                st.markdown("### 🔧 Spalten zuordnen")
-                mapping = {}
-                cols = st.columns(2)
-                
-                with cols[0]:
-                    mapping['Projektname'] = st.selectbox("Projektname:", df.columns)
-                    mapping['Kosten_Plan'] = st.selectbox("Kosten Plan:", df.columns)
-                
-                with cols[1]:
-                    mapping['Kosten_Ist'] = st.selectbox("Kosten Ist:", df.columns)
-                    mapping['Status'] = st.selectbox("Status (optional):", [''] + list(df.columns))
-                
-                if st.button("🚀 Daten analysieren", type="primary"):
-                    with st.spinner("Analysiere Daten..."):
-                        # Standard-Verarbeitung
-                        df_processed = df.rename(columns=mapping)
-                        st.session_state.df = df_processed
-                        st.session_state.data_loaded = True
-                        st.success("✅ Daten geladen!")
-            
-            # Datenvorschau
-            with st.expander("👁️ Datenvorschau"):
+            with st.expander("👁️ Vorschau"):
                 st.dataframe(df.head(10))
                 
         except Exception as e:
-            st.error(f"❌ Fehler beim Laden der Datei: {str(e)}")
-            st.info("💡 Tipp: Prüfen Sie, ob die Datei das richtige Format hat.")
+            st.error(f"❌ Fehler: {str(e)}")
 
-def show_dashboard_page():
-    """Dashboard mit Visualisierungen"""
-    st.header("📊 Projekt-Dashboard")
+def show_multifile_upload():
+    st.header("📤 Multi-Source Upload")
     
-    if not st.session_state.data_loaded:
-        st.warning("⚠️ Bitte laden Sie zuerst Daten hoch!")
-        return
+    st.info("""
+    🚀 **Multi-Source Intelligence!**
     
-    df = st.session_state.df
-    analysis = st.session_state.analysis_results
+    Laden Sie mehrere Datenquellen für EIN Projekt:
+    - 📊 Ressourcen (monatlich)
+    - 📋 Ressourcen (Arbeitspakete)
+    - 💰 Ist-Kosten
+    - 📦 Arbeitspakete
+    - 📈 Forecast
+    """)
     
-    if analysis and 'summary' in analysis:
-        # KPIs
-        st.markdown("### 📈 Kennzahlen")
-        cols = st.columns(4)
-        
-        summary = analysis['summary']
-        
-        with cols[0]:
-            st.metric("Projekte gesamt", summary.get('total_projects', 0))
-        
-        with cols[1]:
-            total_plan = summary.get('total_cost_plan', 0)
-            st.metric("Kosten Plan", f"€{total_plan:,.0f}")
-        
-        with cols[2]:
-            total_actual = summary.get('total_cost_actual', 0)
-            st.metric("Kosten Ist", f"€{total_actual:,.0f}")
-        
-        with cols[3]:
-            deviation_pct = summary.get('total_deviation_pct', 0)
-            st.metric("Abweichung", f"{deviation_pct:.1f}%", 
-                     delta=f"{deviation_pct:.1f}%",
-                     delta_color="inverse")
-        
-        # Visualisierungen
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("### 🎯 Status-Verteilung")
-            if 'status_distribution' in analysis and analysis['status_distribution']:
-                status_df = pd.DataFrame(
-                    list(analysis['status_distribution'].items()),
-                    columns=['Status', 'Anzahl']
-                )
-                fig = px.pie(status_df, values='Anzahl', names='Status',
-                           color_discrete_sequence=px.colors.qualitative.Set3)
-                st.plotly_chart(fig, use_container_width=True)
-        
-        with col2:
-            st.markdown("### ⚠️ Top 5 Risiko-Projekte")
-            if 'top_risk_projects' in analysis and analysis['top_risk_projects']:
-                risk_df = pd.DataFrame(analysis['top_risk_projects'][:5])
-                if 'projekt_name' in risk_df.columns and 'kosten_abweichung_prozent' in risk_df.columns:
-                    fig = px.bar(risk_df, x='projekt_name', y='kosten_abweichung_prozent',
-                               color='kosten_abweichung_prozent',
-                               color_continuous_scale='Reds')
-                    st.plotly_chart(fig, use_container_width=True)
-        
-        # Projekt-Tabelle
-        st.markdown("### 📋 Alle Projekte")
-        if 'detailed_projects' in analysis:
-            projects_df = pd.DataFrame(analysis['detailed_projects'])
-            display_cols = [col for col in ['projekt_name', 'kosten_plan', 'kosten_ist', 
-                                            'kosten_abweichung_prozent', 'kosten_status'] 
-                          if col in projects_df.columns]
-            if display_cols:
-                st.dataframe(projects_df[display_cols], use_container_width=True)
-    else:
-        st.info("Führen Sie die Analyse auf der Upload-Seite durch.")
-
-def show_report_page():
-    """Report Generator Seite"""
-    st.header("📝 KI-Report Generator")
+    uploaded_files = {}
     
-    if not st.session_state.data_loaded:
-        st.warning("⚠️ Bitte laden Sie zuerst Daten hoch!")
-        return
-    
-    # API Key Check
-    if 'OPENAI_API_KEY' not in os.environ or not os.environ['OPENAI_API_KEY']:
-        st.error("❌ OpenAI API Key fehlt! Bitte in der Sidebar eingeben.")
-        return
-    
-    st.info("🤖 Nutze GPT-4 für intelligente Report-Generierung")
-    
-    # Report-Optionen
     col1, col2 = st.columns(2)
     
     with col1:
-        report_type = st.selectbox(
-            "Report-Typ:",
-            ["Management Summary", "Detaillierter Controlling-Report", "Executive Briefing"]
-        )
+        st.markdown("**Pflicht:**")
+        f1 = st.file_uploader("📊 Ressourcen Monatlich", type=['csv','xlsx'], key='res_m')
+        if f1:
+            uploaded_files['res_m'] = f1
+        
+        f2 = st.file_uploader("💰 Ist-Kosten", type=['csv','xlsx'], key='ist')
+        if f2:
+            uploaded_files['ist'] = f2
+        
+        f3 = st.file_uploader("📦 Arbeitspakete", type=['csv','xlsx'], key='ap')
+        if f3:
+            uploaded_files['ap'] = f3
     
     with col2:
-        language = st.selectbox("Sprache:", ["Deutsch", "English"])
+        st.markdown("**Optional:**")
+        f4 = st.file_uploader("📋 Ressourcen AP", type=['csv','xlsx'], key='res_ap')
+        if f4:
+            uploaded_files['res_ap'] = f4
+        
+        f5 = st.file_uploader("📈 Forecast", type=['csv','xlsx'], key='fc')
+        if f5:
+            uploaded_files['fc'] = f5
     
-    focus_areas = st.multiselect(
-        "Fokus-Bereiche:",
-        ["Kostenabweichungen", "Risiko-Projekte", "Terminabweichungen", "Handlungsempfehlungen"],
-        default=["Kostenabweichungen", "Handlungsempfehlungen"]
-    )
+    st.markdown("---")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Dateien", len(uploaded_files))
+    with col2:
+        required = sum(1 for k in ['res_m','ist','ap'] if k in uploaded_files)
+        st.metric("Pflicht", f"{required}/3")
+    with col3:
+        ready = required >= 3
+        st.metric("Status", "✅ Bereit" if ready else "⏳ Warten")
     
-    if st.button("🚀 Report generieren", type="primary"):
-        with st.spinner("Generiere Report mit GPT-4... (30-60 Sekunden)"):
+    if ready and st.button("🚀 Integrieren", type="primary"):
+        with st.spinner("Verarbeite..."):
             try:
-                generator = AIReportGenerator()
-                analysis = st.session_state.analysis_results
+                dfs = {}
+                for key, file in uploaded_files.items():
+                    if file.name.endswith('.csv'):
+                        df = pd.read_csv(file)
+                    else:
+                        df = pd.read_excel(file)
+                    dfs[file.name] = df
+                    st.success(f"✅ {file.name}: {len(df)} Zeilen")
                 
-                report_content = generator.generate_report(
-                    analysis,
-                    report_type=report_type,
-                    language=language,
-                    focus_areas=focus_areas
-                )
+                processor = MultiFileProcessor()
+                integrated = processor.load_files(dfs)
                 
-                st.success("✅ Report erfolgreich generiert!")
+                st.session_state.integrated_data = integrated
+                st.session_state.multifile_loaded = True
                 
-                # Report anzeigen
-                st.markdown("### 📄 Generierter Report")
-                st.markdown(report_content)
+                st.success("🎉 Integration erfolgreich!")
                 
-                # Word-Export
-                builder = ReportBuilder()
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                filename = f"controlbot_report_{timestamp}.docx"
+                summary = integrated['summary']
                 
-                builder.create_report(report_content, analysis, filename)
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.metric("Projekt", summary['project_id'])
+                with col2:
+                    st.metric("Budget", f"€{summary['total_budget']:,.0f}")
+                with col3:
+                    st.metric("Ist", f"€{summary['total_ist']:,.0f}")
+                with col4:
+                    st.metric("Prognose", f"€{summary['projected_total']:,.0f}", 
+                             delta=f"{summary['deviation_pct']:+.1f}%")
                 
-                with open(filename, 'rb') as f:
-                    st.download_button(
-                        "📥 Report als Word herunterladen",
-                        f,
-                        file_name=filename,
-                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                    )
+                st.info("👉 Gehen Sie zum Dashboard!")
+                st.balloons()
                 
             except Exception as e:
-                st.error(f"❌ Fehler bei der Report-Generierung: {str(e)}")
-                st.info("💡 Prüfen Sie, ob Ihr OpenAI API Key gültig ist und Guthaben vorhanden ist.")
+                st.error(f"❌ Fehler: {str(e)}")
+
+def show_dashboard():
+    st.header("📊 Dashboard")
+    
+    if st.session_state.multifile_loaded:
+        data = st.session_state.integrated_data
+        summary = data['summary']
+        
+        st.markdown("### 📈 Multi-Source Projekt-Übersicht")
+        
+        col1, col2, col3, col4, col5 = st.columns(5)
+        with col1:
+            st.metric("Projekt", summary['project_id'])
+        with col2:
+            st.metric("Budget", f"€{summary['total_budget']:,.0f}")
+        with col3:
+            pct = summary['total_ist']/summary['total_budget']*100 if summary['total_budget'] > 0 else 0
+            st.metric("Ist-Kosten", f"€{summary['total_ist']:,.0f}", delta=f"{pct:.0f}%")
+        with col4:
+            st.metric("Prognose", f"€{summary['projected_total']:,.0f}", 
+                     delta=f"{summary['deviation_pct']:+.1f}%", delta_color="inverse")
+        with col5:
+            if 'budget_runway_months' in summary:
+                st.metric("Reichweite", f"{summary['budget_runway_months']:.1f} Mon.")
+        
+        st.markdown("---")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.markdown("### 💰 Finanzen")
+            fig = go.Figure()
+            fig.add_trace(go.Bar(name='Budget', x=[''], y=[summary['total_budget']], marker_color='lightblue'))
+            fig.add_trace(go.Bar(name='Ist', x=[''], y=[summary['total_ist']], marker_color='orange'))
+            fig.add_trace(go.Bar(name='Forecast', x=[''], y=[summary['total_forecast']], marker_color='lightgreen'))
+            fig.update_layout(barmode='group', height=300, showlegend=True)
+            st.plotly_chart(fig, use_container_width=True)
+        
+        with col2:
+            st.markdown("### 📦 Arbeitspakete")
+            if data['arbeitspakete']:
+                ap = data['arbeitspakete']['summary']
+                pie_data = {
+                    'Status': ['Fertig', 'In Arbeit', 'Nicht gestartet'],
+                    'Anzahl': [ap['completed'], ap['in_progress'], ap['not_started']]
+                }
+                fig = px.pie(pie_data, values='Anzahl', names='Status',
+                           color_discrete_map={'Fertig':'green','In Arbeit':'orange','Nicht gestartet':'gray'})
+                fig.update_layout(height=300)
+                st.plotly_chart(fig, use_container_width=True)
+        
+        with col3:
+            st.markdown("### 👥 Ressourcen")
+            if data['ressourcen_monatlich']:
+                res = data['ressourcen_monatlich']['summary']
+                st.metric("Ø Mitarbeiter", f"{res['avg_mitarbeiter']:.1f}")
+                st.metric("Peak", f"{res['peak_mitarbeiter']} MA")
+                st.metric("Stunden", f"{res['total_stunden']:,.0f}h")
+        
+    elif st.session_state.data_loaded:
+        analysis = st.session_state.analysis_results
+        if analysis and 'summary' in analysis:
+            summary = analysis['summary']
+            
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Projekte", summary.get('total_projects', 0))
+            with col2:
+                st.metric("Plan", f"€{summary.get('total_cost_plan', 0):,.0f}")
+            with col3:
+                st.metric("Ist", f"€{summary.get('total_cost_actual', 0):,.0f}")
+            with col4:
+                st.metric("Abweichung", f"{summary.get('total_deviation_pct', 0):.1f}%")
+    else:
+        st.warning("⚠️ Keine Daten geladen! Bitte Upload nutzen.")
+
+def show_report_page():
+    st.header("📝 KI-Report Generator")
+    
+    if not st.session_state.data_loaded and not st.session_state.multifile_loaded:
+        st.warning("⚠️ Bitte laden Sie zuerst Daten hoch!")
+        return
+    
+    if 'OPENAI_API_KEY' not in os.environ or not os.environ['OPENAI_API_KEY']:
+        st.error("❌ API Key fehlt!")
+        return
+    
+    st.info("🤖 GPT-4 Report-Generierung")
+    
+    if st.button("🚀 Report generieren"):
+        st.info("Report-Generierung in Entwicklung...")
 
 def show_help_page():
-    """Anleitung und Hilfe"""
     st.header("ℹ️ Anleitung")
     
-    version_info = "v1.1 mit Smart Data Import" if SMART_FEATURES else "v1.0 Standard"
-    st.info(f"📌 ControlBot {version_info}")
+    features = []
+    if MULTIFILE_FEATURES:
+        features.append("Multi-Source")
+    if SMART_FEATURES:
+        features.append("Smart Import")
+    
+    st.info(f"ControlBot mit {', '.join(features) if features else 'Standard'} Features")
     
     st.markdown("""
     ## 🚀 Schnellstart
     
-    1. **Daten hochladen** - Laden Sie Ihre Excel/CSV-Datei hoch
-    2. **Automatische Erkennung** - Das System erkennt Spalten automatisch
-    3. **Analyse** - Klicken Sie auf "Daten analysieren"
-    4. **Dashboard** - Sehen Sie sich die Visualisierungen an
-    5. **Report** - Generieren Sie KI-gestützte Reports
+    ### Single File:
+    1. Daten Upload → Datei hochladen
+    2. System erkennt Spalten automatisch
+    3. Analysieren klicken
+    4. Dashboard ansehen
     
-    ## 📋 Unterstützte Formate
-    """)
+    ### Multi-Source:
+    1. Multi-Source Upload → 3-5 Dateien hochladen
+    2. Integrieren klicken
+    3. Dashboard ansehen
     
-    if SMART_FEATURES:
-        st.success("""
-        ✅ **Smart Import aktiviert!**
-        - SAP Exporte
-        - MS Project
-        - Jira
-        - Excel (beliebige Formate)
-        - Automatische Zahlen- und Datums-Erkennung
-        """)
-    else:
-        st.info("""
-        📊 Standard-Import:
-        - Excel (.xlsx, .xls)
-        - CSV-Dateien
-        - Manuelle Spalten-Zuordnung
-        """)
+    ## 📋 Mock-Daten
     
-    st.markdown("""
-    ## 💡 Tipps
+    Im `mock_data/` Ordner finden Sie Beispiel-Dateien:
+    - Ressourcen_Monatlich.csv
+    - Ist_Kosten.csv
+    - Arbeitspakete.csv
+    - Ressourcen_Arbeitspakete.csv
+    - Forecast.csv
     
-    - **Zahlenformate:** 150000, 150.000, €150k, $1.5M - alles funktioniert!
-    - **Daten:** 31.12.2024, 2024-12-31, 12/31/24 - alles wird erkannt!
-    - **Templates:** Nutzen Sie vordefinierte Templates für schnellere Verarbeitung
-    
-    ## 🆘 Probleme?
-    
-    - **API Key Fehler:** Prüfen Sie Ihren OpenAI Key und Guthaben
-    - **Upload Fehler:** Prüfen Sie das Dateiformat
-    - **Keine Erkennung:** Nutzen Sie ein vordefiniertes Template
+    **Wichtig:** Alle Dateien müssen gleiche Projekt_ID haben!
     """)
 
 if __name__ == "__main__":
